@@ -1,6 +1,81 @@
+import yaml
+import psycopg2
+import sqlalchemy
+from typing import Dict,List
 
 
 
 class DatabaseConnector:
     """use to connect with and upload data to the database.
     """
+
+    database : str
+    host : str
+    password : str 
+    user : str 
+    port : str
+
+    engine : sqlalchemy.Engine
+
+    _yaml_mapping : List[str] = ['RDS_HOST', 'RDS_PASSWORD', 'RDS_USER', 'RDS_DATABASE', 'RDS_PORT']
+
+    def read_db_creds(self) -> None:
+        """read db_creds.yaml file"""
+        data_loaded : Dict
+        with open('db_creds.yaml','r') as stream:
+        #yaml.reader('db')
+            data_loaded = yaml.safe_load(stream) # dict
+            self.database = data_loaded['RDS_DATABASE']
+            self.host = data_loaded['RDS_HOST']
+            self.password = data_loaded['RDS_PASSWORD']
+            self.user = data_loaded['RDS_USER']
+            self.port = data_loaded['RDS_PORT']
+
+    def init_db_engine(self):
+        """read the credentials from the return of read_db_creds and initialise and return an sqlalchemy database engine."""
+        # engine = sqlalchemy.create_engine
+        DATABASE_TYPE = 'postgresql'
+        DBAPI = 'psycopg2'
+        ENDPOINT = self.host
+        USER = self.user
+        PASSWORD = self.password
+        PORT = 5432
+        DATABASE = self.database
+
+        engine = sqlalchemy.create_engine(f"{DATABASE_TYPE}+{DBAPI}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}")
+        engine.connect()
+        self.engine = engine
+
+    def list_db_tables(self) -> List:
+         """Returns a list of tables in list format"""
+         table_names : List
+         table_names = sqlalchemy.inspect(self.engine).get_table_names()
+         return table_names
+
+
+
+
+def test_init_db_engine():
+        db_connector = DatabaseConnector()
+        db_connector.read_db_creds()
+        db_connector.init_db_engine()
+        print(db_connector.engine)
+        print(db_connector.list_db_tables())
+        # inspector = sqlalchemy.inspect(db_connector.engine)
+        # inspector.get_table_names()
+        # print(inspector.get_table_names())
+        #['legacy_store_details', 'dim_card_details', 'legacy_users', 'orders_table']
+
+def test_db_connector():
+        db_connector = DatabaseConnector()
+        db_connector.read_db_creds()
+        print(db_connector.database)
+        print(db_connector.host)
+        print(db_connector.password)
+        print(db_connector.user)
+        print(db_connector.port)
+
+
+if __name__ == '__main__':
+    #test_db_connector()
+    test_init_db_engine()
