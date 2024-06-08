@@ -1,0 +1,10 @@
+name: multinational
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - psycopg2=2.9.9
+  - pyyaml=6.0.1
+  - sqlalchemy=2.0.25
+  - pandas=2.2.1
+prefix: C:\Users\Spencer\miniconda3\envs\multinational
