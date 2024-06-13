@@ -66,9 +66,9 @@ class DataCleaning:
             if number.startswith('(') and ')' in number: # get rid of parentheses if 
                 number = number.replace('(','')
                 number =  number.replace(')',' ')
-                number = number.replace('.', ' ')
-                number = number.replace('-',' ')
-                number = number.replace('x', ' ext ' )
+            number = number.replace('.', ' ')
+            number = number.replace('-',' ')
+            number = number.replace('x', ' ext ' )
             if number.startswith('001'):
                 number = number[3:]
                 number = number.strip()
