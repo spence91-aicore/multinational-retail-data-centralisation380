@@ -1,5 +1,7 @@
 import yaml
 import psycopg2
+import sqlite3
+import pandas as pd
 import sqlalchemy
 from typing import Dict,List
 
@@ -31,10 +33,34 @@ class DatabaseConnector:
             self.user = data_loaded['RDS_USER']
             self.port = data_loaded['RDS_PORT']
 
-    def init_db_engine(self):
+    def _init_sqlite_engine(self) -> None:
+        """this is used by init_db_engine, to init a sql instance instead of postgres"""
+        def create_sqlite_database(filename):
+            """create a database if one doesn't exist"""
+            conn = None
+            try:
+                conn = sqlite3.connect(filename)
+                print(sqlite3.sqlite_version)
+            except sqlite3.Error as e:
+                print(e)
+            finally:
+                if conn:
+                    conn.close()
+        create_sqlite_database(self.database)
+        DATABASE_TYPE = 'sqlite'
+        DATABASE = self.database
+        engine = sqlalchemy.create_engine(f"{DATABASE_TYPE}:///{DATABASE}")
+        engine.connect()
+        self.engine = engine
+
+
+    def init_db_engine(self,TYPE='postgresql') -> None:
         """read the credentials from the return of read_db_creds and initialise and return an sqlalchemy database engine."""
         # engine = sqlalchemy.create_engine
-        DATABASE_TYPE = 'postgresql'
+        if TYPE == 'sqlite':
+             self._init_sqlite_engine()
+             return
+        DATABASE_TYPE = TYPE #'postgresql'
         DBAPI = 'psycopg2'
         ENDPOINT = self.host
         USER = self.user
@@ -51,7 +77,25 @@ class DatabaseConnector:
          table_names : List
          table_names = sqlalchemy.inspect(self.engine).get_table_names()
          return table_names
+    
+    def upload_to_db(self,table_name : str, data_to_upload : pd.DataFrame):
+         """uses out-of-the box pandas fun"""
+         data_to_upload.to_sql(table_name,self.engine,if_exists='replace')
 
+
+def test_upload_to_db():
+    from data_cleaning import DataCleaning
+    df : pd.DataFrame = pd.read_pickle('legacy_user.pkl')
+    a = DataCleaning()
+    df = a.clean_user_data(df)
+    db_sqlite = DatabaseConnector()
+    db_sqlite.database = 'sales_data.db'
+    db_sqlite.init_db_engine(TYPE='sqlite')
+    # df.info()
+    db_sqlite.upload_to_db(table_name='dim_users',data_to_upload=df) # upload it
+    print(db_sqlite.list_db_tables())
+    a = pd.read_sql_table('dim_users',db_sqlite.engine.connect())
+    print(a.head(10))
 
 
 
@@ -78,4 +122,5 @@ def test_db_connector():
 
 if __name__ == '__main__':
     #test_db_connector()
-    test_init_db_engine()
+    # test_init_db_engine()
+    test_upload_to_db()
