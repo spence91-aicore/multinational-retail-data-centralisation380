@@ -7,4 +7,6 @@ dependencies:
   - pyyaml=6.0.1
   - sqlalchemy=2.0.25
   - pandas=2.2.1
+  - tabula-py=2.6.0
+  - requests=2.32.2
 prefix: C:\Users\Spencer\miniconda3\envs\multinational
