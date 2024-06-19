@@ -82,6 +82,22 @@ class DatabaseConnector:
          """uses out-of-the box pandas fun"""
          data_to_upload.to_sql(table_name,self.engine,if_exists=if_exists)
 
+def test_upload_todb_products_data():
+    from data_cleaning import DataCleaning
+    from data_extraction import DataExtractor     
+    db_sqlite = DatabaseConnector()
+    db_sqlite.database = 'sales_data.db'
+    db_sqlite.init_db_engine(TYPE='sqlite') 
+
+    s3_uri : str = 's3://data-handling-public/products.csv'
+    products_data : pd.DataFrame = DataExtractor.extract_from_s3(s3_uri)
+    products_data = DataCleaning.clean_products_data(products_data=products_data)
+    products_data = DataCleaning.convert_product_weights(products_data=products_data)
+
+    db_sqlite.upload_to_db(table_name='dim_products',data_to_upload=products_data)
+    a = pd.read_sql_table('dim_products',db_sqlite.engine.connect())
+    print(a.head(10)) 
+
 def test_upload_to_db_store_data():
     import requests
     from data_cleaning import DataCleaning
@@ -165,4 +181,5 @@ if __name__ == '__main__':
     # test_init_db_engine()
     # test_upload_to_db()
     # test_upload_to_db_card_details()
-    test_upload_to_db_store_data()
+    # test_upload_to_db_store_data()
+    test_upload_todb_products_data()    

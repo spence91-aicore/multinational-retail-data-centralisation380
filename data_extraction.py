@@ -1,10 +1,14 @@
 import json
+import io 
+import botocore.response
 import requests
 import requests.structures
 from database_utils import DatabaseConnector
 import pandas as pd
 import tabula
-from typing import List, Any
+import boto3 
+import botocore
+from typing import List, Any, Dict
 
 
 class DataExtractor:
@@ -73,8 +77,31 @@ class DataExtractor:
 
         #return dataframe, converting the list
         return pd.DataFrame(store_list)
+    
+    @staticmethod
+    def extract_from_s3(s3_address:str) -> pd.DataFrame:
+        """fetches data from s3 MUST BE CSV FORMAT
+        MUST ALREADY BE AUTHENTICED, otherswise errors"""
+        s3  = boto3.client('s3')
+        bucket, key = s3_address.split('/',2)[-1].split('/',1)
+        csv_object : Dict[Any] = s3.get_object(Bucket=bucket, Key=key)
+        s3_df : pd.DataFrame
+        if (    isinstance(csv_object,dict) # confirm we got a dict back
+                and 'Body' in csv_object.keys() #confirm we have the thing we want to DL
+                and isinstance(csv_object['Body'],botocore.response.StreamingBody) ): #confirm it's what we want
+            bytes_object : bytes = csv_object['Body'].read()
+            s3_df = pd.read_csv(io.BytesIO(bytes_object))   
+        else: 
+            raise ValueError('unable to DL from S3, please check URI')
+
+        return s3_df
 
      
+def test_get_s3_date():
+    s3_uri : str = 's3://data-handling-public/products.csv'
+    b : pd.DataFrame = DataExtractor.extract_from_s3(s3_uri)
+    print(b)
+    b.to_pickle('s3_data.pkl')
 
 def test_retireve_stores_data():
     a = DataExtractor()
@@ -125,4 +152,5 @@ if __name__ == '__main__':
     # test_databaseconnector()
     # test_tabula()
     # test_list_number_of_stores()
-    test_retireve_stores_data()
+    # test_retireve_stores_data()
+    test_get_s3_date()

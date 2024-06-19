@@ -41,6 +41,7 @@ class DataCleaning:
         """removes rows where there appears to be a 10char string in each col
         check the first 4 cols"""
         regex_for_bad_rows = '^[0-9A-Z]{10}$'
+        # user_data.drop('Unnamed',axis=1,errors='ignore')
         #card_data.drop('index',axis=1,errors='ignore').columns
         match_mask : pd.Series = (user_data[user_data.drop('index',axis=1,errors='ignore').columns[0]].astype('str').str.match(regex_for_bad_rows) & \
                 user_data[user_data.drop('index',axis=1,errors='ignore').columns[1]].astype('str').str.match(regex_for_bad_rows) & \
@@ -48,6 +49,11 @@ class DataCleaning:
                 user_data[user_data.drop('index',axis=1,errors='ignore').columns[3]].astype('str').str.match(regex_for_bad_rows))
         return user_data.drop(user_data[match_mask].index)
 
+    @staticmethod
+    def _remove_rows_of_nan_data(user_data:pd.DataFrame) -> pd.DataFrame:
+        """removes rows where  """
+
+        user_data
 
     @staticmethod
     def _remove_rows_of_null_data(user_data:pd.DataFrame) -> pd.DataFrame:
@@ -174,7 +180,7 @@ class DataCleaning:
         return card_data
 
     @staticmethod
-    def clean_store_data(store_data : pd.DataFrame):
+    def clean_store_data(store_data : pd.DataFrame) -> pd.DataFrame:
 
         # remove rows of "bad data"
         store_data = DataCleaning._remove_rows_of_bad_data(store_data)
@@ -211,11 +217,78 @@ class DataCleaning:
         store_data['longitude'] = store_data['longitude'].astype('float')  
 
         return store_data
+    
+    @staticmethod
+    def clean_products_data(products_data: pd.DataFrame) -> pd.DataFrame:
+        products_data = products_data.drop('Unnamed: 0',axis=1,errors='ignore') # YOU NEED TO SORT THIS OUT - don't ignore this!!
+        products_data = DataCleaning._remove_rows_of_bad_data(products_data)
+        products_data = DataCleaning._remove_rows_of_null_data(products_data)
+        products_data = products_data.dropna(axis=0,how='all')
+
+        # convert to datetime
+        products_data['date_added'] = DataCleaning._tidy_dates(products_data['date_added'])
+        
+
+        return products_data
+
+    @staticmethod
+    def convert_product_weights(products_data: pd.DataFrame) -> pd.DataFrame:
+        """STRONGLY RECOMEND putting dataframe through clean_products_data() first
+        tries to normalise weights to .kg
+        """
+        def split_and_and_multiply(i :str) -> float:
+            val_list = i.split(' x ')
+            # print(val_list)
+            return float(val_list[0]) * float(val_list[1])
+    
+        # remove spaces and stops from the end of the string
+        products_data['weight'] = products_data['weight'].astype('str').str.replace('[ .]+$','',regex=True)
+
+        ### find all things that end with kg
+        kg_df = products_data['weight'].astype('str').str.endswith('kg')
+        # products_data.loc[kg_df,['weight_type']] = 'kg'
+        products_data.loc[kg_df,['weight']] = products_data[kg_df]['weight'].astype('str').str.replace('kg','',regex=False) #.astype('float')
+
+        ### find all things that end with g
+        gram_df = products_data['weight'].astype('str').str.endswith('g')
+        # products_data.loc[gram_df,['weight_type']] = 'g'
+        # 11 and 12 index - are 1.2 grams - that's clearly not right - fix?
+        products_data.loc[gram_df,['weight']] = products_data[gram_df]['weight'].astype('str').str.replace('g','',regex=False) #.astype('float')
+
+        # find all things that end ml
+        ml_df = products_data['weight'].astype('str').str.endswith('ml')
+        # products_data.loc[ml_df,['weight_type']] = 'ml'
+        products_data.loc[ml_df,['weight']] = products_data[ml_df]['weight'].astype('str').str.replace('ml','',regex=False) #astype('float')
+
+        # find all things that end oz
+        oz_df = products_data['weight'].astype('str').str.endswith('oz')
+        # products_data.loc[oz_df,['weight_type']] = 'oz'
+        products_data.loc[oz_df,['weight']] = products_data[oz_df]['weight'].astype('str').str.replace('oz','',regex=False)
+
+        # find all things that have a ' x ' in it, times it together
+        times_df = products_data['weight'].astype('str').str.contains(' x ')
+        products_data.loc[times_df,['weight']] = products_data[times_df]['weight'].apply(split_and_and_multiply)
+
+        ##conversions to kg
+        # convert weight to float type
+        products_data['weight'] = products_data['weight'].astype('float')
+        # conversion on ml to kg
+        products_data.loc[ml_df,['weight']] = products_data[ml_df]['weight'].apply(lambda x : x / 1000)
+        # conversion on g to kg
+        products_data.loc[gram_df,['weight']] = products_data[gram_df]['weight'].apply(lambda x : x / 1000)
+        # conversion of oz to kg = 0.0283
+        products_data.loc[oz_df,['weight']] = products_data[oz_df]['weight'].apply(lambda x: x * 0.0283)
+        return products_data
 
 
+def test_convert_product_weights():
+    df : pd.DataFrame = pd.read_pickle('s3_data.pkl')
+    df = DataCleaning.clean_products_data(df)
+    df = DataCleaning.convert_product_weights(df) 
+    print(df)   
 
 def test_clean_user_data():
-    df : pd.DataFrame = pd.read_pickle('legacy_user.pkl')
+    products_data : pd.DataFrame = pd.read_pickle('legacy_user.pkl')
     a = DataCleaning()
     df = a.clean_user_data(df)
     df.info()
@@ -238,6 +311,7 @@ def test_clean_store_data():
 if __name__ == '__main__':
     # test_clean_user_data()
     # test_clean_card_data()
-    test_clean_store_data()
+    # test_clean_store_data()
+    test_convert_product_weights()
 # df = a.read_rds_table('legacy_users')
 # df.to_pickle('legacy_user.pkl')
