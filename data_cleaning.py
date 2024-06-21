@@ -279,6 +279,42 @@ class DataCleaning:
         # conversion of oz to kg = 0.0283
         products_data.loc[oz_df,['weight']] = products_data[oz_df]['weight'].apply(lambda x: x * 0.0283)
         return products_data
+    
+    @staticmethod
+    def clean_orders_data(orders_data:pd.DataFrame) -> pd.DataFrame:
+        """expect orders data, drops first name, last name, 1, and level_0 col, if they exist"""
+        orders_data = orders_data.drop('first_name',axis=1,errors='ignore')
+        orders_data = orders_data.drop('last_name',axis=1,errors='ignore')
+        orders_data = orders_data.drop('1',axis=1,errors='ignore')
+        orders_data = orders_data.drop('level_0', axis=1, errors='ignore')
+        orders_data = orders_data.reset_index(drop=True)
+        return orders_data        
+
+    @staticmethod
+    def clean_datetimes_data(datetimes_data:pd.DataFrame) -> pd.DataFrame:
+        "expect datetimes, cleans data, changes types for ints, adds a new datetime col"
+
+        #remove bad lines
+        datetimes_data = DataCleaning._remove_rows_of_bad_data(datetimes_data)
+        datetimes_data = DataCleaning._remove_rows_of_null_data(datetimes_data)
+
+        #convert types
+        datetimes_data['month'] = datetimes_data['month'].astype('int')
+        datetimes_data['day'] = datetimes_data['day'].astype('int')
+        datetimes_data['year'] = datetimes_data['year'].astype('int')
+
+        # new datetime col
+        datetimes_data['datetime'] = pd.to_datetime( \
+                    datetimes_data.apply(lambda x: "%s-%s-%s-%s" % (x['year'],x['month'],x['day'],x['timestamp']), axis=1) \
+                    ,format='%Y-%m-%d-%H:%M:%S')
+        
+        return datetimes_data
+
+
+def test_clean_datetimes_data():
+    df : pd.DataFrame = pd.read_pickle('timestamps.pkl')
+    df = DataCleaning.clean_datetimes_data(df)
+    print(df)
 
 
 def test_convert_product_weights():
@@ -312,6 +348,7 @@ if __name__ == '__main__':
     # test_clean_user_data()
     # test_clean_card_data()
     # test_clean_store_data()
-    test_convert_product_weights()
+    # test_convert_product_weights()
+    test_clean_datetimes_data()
 # df = a.read_rds_table('legacy_users')
 # df.to_pickle('legacy_user.pkl')

@@ -69,7 +69,7 @@ class DataExtractor:
         for store_num in store_range:
             url : str = retrieve_store_endpoint + str(store_num)
             print('fetching %s' % url)
-            responce = requests.Response = requests.get(url=url,headers=headers_dict)
+            responce : requests.Response = requests.get(url=url,headers=headers_dict)
             if responce.status_code == 200:
                 store_list.append(json.loads(responce.text))
             else:
@@ -95,7 +95,23 @@ class DataExtractor:
             raise ValueError('unable to DL from S3, please check URI')
 
         return s3_df
+    
+    def extract_json_from_http(http_uri:str) -> pd.DataFrame:
+        """fetches data, from http sources
+        DATA MUST BE IN JSON FORMAT!
+        e.g http_uri='https://data-handling.com/date_details.json
+        """
+        
+        responce : requests.Response = requests.get(http_uri)
+        # pd.read_json
+        return pd.read_json(responce.text)
 
+
+def test_get_json_from_http():
+    http_uri = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
+    b = pd.DataFrame = DataExtractor.extract_json_from_http(http_uri)
+    print(b)
+    b.to_pickle('timestamps.pkl')
      
 def test_get_s3_date():
     s3_uri : str = 's3://data-handling-public/products.csv'
@@ -126,17 +142,20 @@ def test_list_number_of_stores():
     b = a.list_number_of_stores(number_stores_endpoint=url,headers_dict=headers_dict)
     print(b)
 
-
+def test_get_orders_table_data():
+    a = DataExtractor()
+    b : pd.DataFrame = a.read_rds_table('orders_table')
+    b.to_pickle('orders_data.pkl')
 
 def test_databaseconnector():
     a = DataExtractor()
-    a.read_rds_table('legacy_store_details')
-    # print(a.databaseconnector.list_db_tables())
+    # a.read_rds_table('legacy_store_details')
+    print(a.databaseconnector.list_db_tables())
 
 
 def test_bad_databaseconnector():
     a = DataExtractor()
-    a.read_rds_table('thing')
+    # a.read_rds_table('thing')
     print(a.databaseconnector.list_db_tables())
 
 def test_tabula():
@@ -146,11 +165,15 @@ def test_tabula():
     # pdf = 'card_details.pdf'
     df = tabula.read_pdf(pdf,stream=True)
 
+# def test_
+
 if __name__ == '__main__':
+    # test_get_orders_table_data()
     #test_db_connector()
     # test_init_db_engine()
     # test_databaseconnector()
     # test_tabula()
     # test_list_number_of_stores()
     # test_retireve_stores_data()
-    test_get_s3_date()
+    # test_get_s3_date()
+    test_get_json_from_http()

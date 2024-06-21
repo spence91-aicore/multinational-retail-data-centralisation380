@@ -82,6 +82,41 @@ class DatabaseConnector:
          """uses out-of-the box pandas fun"""
          data_to_upload.to_sql(table_name,self.engine,if_exists=if_exists)
 
+def test_upload_todb_datetimes_data():
+    from data_cleaning import DataCleaning
+    from data_extraction import DataExtractor 
+    db_sqlite = DatabaseConnector()
+    db_sqlite.database = 'sales_data.db'
+    db_sqlite.init_db_engine(TYPE='sqlite')     
+    # a = DataExtractor()
+    http_uri = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
+    datetimes_data = pd.DataFrame = DataExtractor.extract_json_from_http(http_uri)
+    datetimes_data = DataCleaning.clean_datetimes_data(datetimes_data)
+    db_sqlite.upload_to_db(table_name='dim_date_times',data_to_upload=datetimes_data,if_exists='replace')
+    a = pd.read_sql_table('dim_date_times',db_sqlite.engine.connect())
+    print(a.head(10))
+
+def test_upload_todb_orders_data():
+    from data_cleaning import DataCleaning
+    from data_extraction import DataExtractor 
+    db_sqlite = DatabaseConnector()
+    db_sqlite.database = 'sales_data.db'
+    db_sqlite.init_db_engine(TYPE='sqlite')     
+    a = DataExtractor()
+    orders_data : pd.DataFrame = a.read_rds_table('orders_table')    
+    orders_data = DataCleaning.clean_orders_data(orders_data)
+    # print(b)
+    db_sqlite.upload_to_db(table_name='orders_table',data_to_upload=orders_data,if_exists='replace')
+    a = pd.read_sql_table('orders_table',db_sqlite.engine.connect())
+    print(a.head(10))
+
+def test_upload_todb_products_data():
+    from data_cleaning import DataCleaning
+    from data_extraction import DataExtractor     
+    db_sqlite = DatabaseConnector()
+    db_sqlite.database = 'sales_data.db'
+    db_sqlite.init_db_engine(TYPE='sqlite') 
+
 def test_upload_todb_products_data():
     from data_cleaning import DataCleaning
     from data_extraction import DataExtractor     
@@ -182,4 +217,6 @@ if __name__ == '__main__':
     # test_upload_to_db()
     # test_upload_to_db_card_details()
     # test_upload_to_db_store_data()
-    test_upload_todb_products_data()    
+    # test_upload_todb_products_data() 
+    # test_upload_todb_orders_data()   
+    test_upload_todb_datetimes_data()
