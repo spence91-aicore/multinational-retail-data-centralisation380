@@ -1,14 +1,14 @@
 import json
-import io 
-import botocore.response
+import io
+from typing import List, Any, Dict
 import requests
-import requests.structures
-from database_utils import DatabaseConnector
+#import requests.structures
 import pandas as pd
 import tabula
-import boto3 
+import boto3
 import botocore
-from typing import List, Any, Dict
+import botocore.response
+from database_utils import DatabaseConnector
 
 
 class DataExtractor:
