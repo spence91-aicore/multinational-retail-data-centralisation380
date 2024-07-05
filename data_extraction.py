@@ -2,7 +2,6 @@ import json
 import io
 from typing import List, Any, Dict
 import requests
-#import requests.structures
 import pandas as pd
 import tabula
 import boto3
@@ -24,17 +23,16 @@ class DataExtractor:
         self.databaseconnector = DatabaseConnector()
         self.databaseconnector.read_db_creds()
         self.databaseconnector.init_db_engine()        
-        # pass        
 
     def read_rds_table(self,db_table:str) -> pd.DataFrame:
-
         if db_table not in self.databaseconnector.list_db_tables():
             raise NameError('db table "%s" not in list of database tables, unable to read, available tables:%s' % (db_table,self.databaseconnector.list_db_tables()))
         table : pd.DataFrame = pd.read_sql_table(db_table, self.databaseconnector.engine.connect())
         # print(table.head())
         return table
-    
-    def retrieve_pdf_data(self,link:str) -> pd.DataFrame:
+
+    @staticmethod    
+    def retrieve_pdf_data(link:str) -> pd.DataFrame:
         """uses tabular to read tables in pdfs - this one fetches all pages
         It'll merge all the tables together to make one big one"""
         merged_df : pd.DataFrame = pd.DataFrame()
@@ -96,6 +94,7 @@ class DataExtractor:
 
         return s3_df
     
+    @staticmethod
     def extract_json_from_http(http_uri:str) -> pd.DataFrame:
         """fetches data, from http sources
         DATA MUST BE IN JSON FORMAT!
@@ -103,77 +102,9 @@ class DataExtractor:
         """
         
         responce : requests.Response = requests.get(http_uri)
-        # pd.read_json
-        return pd.read_json(responce.text)
+        if responce.status_code == 200:
+            return pd.read_json(responce.text)
+        else:
+            raise NameError('unable to fetch data %s, %s' % (responce.status_code, responce.text))        
 
 
-def test_get_json_from_http():
-    http_uri = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json'
-    b = pd.DataFrame = DataExtractor.extract_json_from_http(http_uri)
-    print(b)
-    b.to_pickle('timestamps.pkl')
-     
-def test_get_s3_date():
-    s3_uri : str = 's3://data-handling-public/products.csv'
-    b : pd.DataFrame = DataExtractor.extract_from_s3(s3_uri)
-    print(b)
-    b.to_pickle('s3_data.pkl')
-
-def test_retireve_stores_data():
-    a = DataExtractor()
-    url = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/store_details/'
-    key = 'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'
-    headers_dict : requests.structures.CaseInsensitiveDict = requests.structures.CaseInsensitiveDict()
-    # headers_dict["Domain"] = self.IplicitDomain
-    # headers_dict["Content-Type"] = "application/json"
-    headers_dict['x-api-key'] = 'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'
-    b : pd.DataFrame = a.retrieve_stores_data(retrieve_store_endpoint=url,headers_dict=headers_dict,num_stores=451)
-    print(b)    
-    b.to_pickle('api_data.pkl')
-
-def test_list_number_of_stores():
-    a = DataExtractor()
-    url = 'https://aqj7u5id95.execute-api.eu-west-1.amazonaws.com/prod/number_stores'
-    key = 'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'
-    headers_dict : requests.structures.CaseInsensitiveDict = requests.structures.CaseInsensitiveDict()
-    # headers_dict["Domain"] = self.IplicitDomain
-    # headers_dict["Content-Type"] = "application/json"
-    headers_dict['x-api-key'] = 'yFBQbwXe9J3sd6zWVAMrK6lcxxr0q1lr2PT6DDMX'
-    b = a.list_number_of_stores(number_stores_endpoint=url,headers_dict=headers_dict)
-    print(b)
-
-def test_get_orders_table_data():
-    a = DataExtractor()
-    b : pd.DataFrame = a.read_rds_table('orders_table')
-    b.to_pickle('orders_data.pkl')
-
-def test_databaseconnector():
-    a = DataExtractor()
-    # a.read_rds_table('legacy_store_details')
-    print(a.databaseconnector.list_db_tables())
-
-
-def test_bad_databaseconnector():
-    a = DataExtractor()
-    # a.read_rds_table('thing')
-    print(a.databaseconnector.list_db_tables())
-
-def test_tabula():
-    import tabula
-    import pandas as pd
-    pdf = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/card_details.pdf'
-    # pdf = 'card_details.pdf'
-    df = tabula.read_pdf(pdf,stream=True)
-
-# def test_
-
-if __name__ == '__main__':
-    # test_get_orders_table_data()
-    #test_db_connector()
-    # test_init_db_engine()
-    # test_databaseconnector()
-    # test_tabula()
-    # test_list_number_of_stores()
-    # test_retireve_stores_data()
-    # test_get_s3_date()
-    test_get_json_from_http()
